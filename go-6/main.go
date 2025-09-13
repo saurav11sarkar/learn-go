@@ -19,3 +19,7 @@ func init() {
 	a = 100
 	b = 200
 }
+
+func init() {
+	fmt.Println("Init function called again!", a, b)
+}
