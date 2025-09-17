@@ -13,7 +13,6 @@ func outer() func() {
 	fmt.Println("outer function called!", age)
 
 	show := func() {
-		fmt.Println("call function called!", mamory)
 		mamory = mamory + a + p
 		fmt.Println("memory:", mamory)
 	}
