@@ -29,31 +29,26 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func sendData(w http.ResponseWriter, statusCode int, data interface{}) {
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(data)
+}
+
 func handleProducts(w http.ResponseWriter, r *http.Request) {
 	handle(w, r)
 	switch r.Method {
 	case http.MethodGet:
-		w.WriteHeader(http.StatusOK)
-		err := json.NewEncoder(w).Encode(products)
-		if err != nil {
-			http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
-			return
-		}
+		sendData(w, http.StatusOK, products)
 	case http.MethodPost:
 		var newProduct Product
 		err := json.NewDecoder(r.Body).Decode(&newProduct)
 		if err != nil {
-			http.Error(w, "Error decoding JSON", http.StatusBadRequest)
+			sendData(w, http.StatusBadRequest, "Error decoding JSON")
 			return
 		}
 		newProduct.ID = len(products) + 1
 		products = append(products, newProduct)
-		w.WriteHeader(http.StatusCreated)
-		err = json.NewEncoder(w).Encode(newProduct)
-		if err != nil {
-			http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
-			return
-		}
+		sendData(w, http.StatusCreated, newProduct)
 
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -64,9 +59,9 @@ func handleProducts(w http.ResponseWriter, r *http.Request) {
 func main() {
 	app := http.NewServeMux()
 
-	app.Handle("GET /", http.HandlerFunc(rootRoutes))
-	app.Handle("GET /products", http.HandlerFunc(handleProducts))
-	app.Handle("POST /products", http.HandlerFunc(handleProducts))
+	app.Handle("GET /", handlerCorsMiddleware(http.HandlerFunc(rootRoutes)))
+	app.Handle("GET /products", handlerCorsMiddleware(http.HandlerFunc(handleProducts)))
+	app.Handle("POST /products", handlerCorsMiddleware(http.HandlerFunc(handleProducts)))
 
 	fmt.Println("server is running on port http://localhost:8080")
 
@@ -91,4 +86,16 @@ func init() {
 		{ID: 9, Name: "Product 9", Price: 90.99},
 		{ID: 10, Name: "Product 10", Price: 100.99},
 	}
+}
+
+func handlerCorsMiddleware(next http.Handler) http.Handler {
+	handleCose := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		next.ServeHTTP(w, r)
+	}
+	hendler := http.HandlerFunc(handleCose)
+	return hendler
 }
